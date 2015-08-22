@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -126,15 +127,31 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 			return
 		}
 
-		for _, sampleVec := range inc.Samples {
+		var buffer bytes.Buffer
+		preamble := `INSERT INTO sample (power, freq, bandwidth, survey_id) VALUES `
+		batchSize := 5000
+
+		for i, sampleVec := range inc.Samples {
+			batch_i := i % batchSize
+			if batch_i == 0 {
+				// Beginning of batch
+				buffer.Reset()
+				buffer.WriteString(preamble)
+			}
+
 			sample := sampleVec.ToSample()
-			if _, err := tx.Exec(`INSERT INTO sample
-					(power, freq, bandwidth, survey_id)
-					VALUES ($1, $2, $3, $4)`,
-				sample.Power, sample.Freq,
-				sample.Bandwidth, surveyID); err != nil {
-				rollbackAndExit(err)
-				return
+			buffer.WriteString(
+				fmt.Sprintf("(%f, %d, %d, %d)",
+					sample.Power, sample.Freq, sample.Bandwidth, surveyID))
+
+			if batch_i == batchSize-1 || i == len(inc.Samples)-1 {
+				// End of batch
+				if _, err := tx.Exec(buffer.String()); err != nil {
+					rollbackAndExit(err)
+					return
+				}
+			} else {
+				buffer.WriteRune(',')
 			}
 		}
 
