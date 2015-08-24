@@ -45,6 +45,7 @@ func sampleHandler(c *gin.Context, db *sql.DB) {
 		rows.Scan(&sample.Power, &sample.Freq, &sample.Bandwidth)
 		resp = append(resp, sample)
 	}
+	c.Header("Cache-Control", "public, max-age=604800")
 	c.JSON(http.StatusOK, gin.H{"samples": resp})
 }
 
@@ -62,10 +63,9 @@ func surveyHandler(c *gin.Context, db *sql.DB) {
 		var survey m.Survey
 		var locbuf []byte
 		rows.Scan(&survey.Id, &survey.Label, &locbuf, &survey.Time)
-		if err := m.ToPoint(string(locbuf), &survey.Location); err != nil {
+		if err := m.StringToPoint(string(locbuf), &survey.Location); err != nil {
 			log.Printf("ERROR PARSING POINT: %s", err)
 		}
-		log.Printf("Survey: %s", &survey)
 		resp = append(resp, survey)
 	}
 

@@ -14,7 +14,7 @@ func (p Point) String() string {
 	return fmt.Sprintf("(%f,%f)", p[0], p[1])
 }
 
-func ToPoint(s string, p *Point) error {
+func StringToPoint(s string, p *Point) error {
 	parseError := func() error {
 		return fmt.Errorf("Invalid Point string: %q", s)
 	}
@@ -39,7 +39,7 @@ func ToPoint(s string, p *Point) error {
 func NewPoint(s string) (*Point, error) {
 	point := new(Point)
 
-	if err := ToPoint(s, point); err != nil {
+	if err := StringToPoint(s, point); err != nil {
 		return nil, err
 	}
 
