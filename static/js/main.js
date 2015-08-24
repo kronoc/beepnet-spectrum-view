@@ -9,6 +9,15 @@ var cacheMRU = []
 function _h(id, df) {
     return id + '___' + df
 }
+
+function showLoading(show) {
+    if (show) {
+        $('#loadingOverlay').css('visibility', 'visible')
+    } else {
+        $('#loadingOverlay').css('visibility', 'hidden')
+    }
+}
+
 function cacheUpdateMRU(id, df) {
     function indexInCache(id, df) {
         var i;
@@ -89,6 +98,7 @@ function getData(ctx, id, df) {
             scaleStepWidth: 5,
             scaleStartValue: 0
         })
+        showLoading(false)
     }
 
     var cachedResult = cacheCheck(id, df)
@@ -133,6 +143,7 @@ $(document).ready(function() {
     var updateGraph = function() {
         var survey = $("#dataSelector").val()
         var df = $("#decFactor").val()
+        showLoading(true)
         getData(ctx, survey, df)
     }
 
