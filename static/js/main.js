@@ -1,4 +1,4 @@
-var CACHE_SIZE = 25
+var CACHE_SIZE = 1000
 var MAX_LABELS = 20
 var MAX_BINS = 100
 
