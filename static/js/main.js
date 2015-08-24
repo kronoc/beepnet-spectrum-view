@@ -6,11 +6,14 @@ var chart = null
 var cache = {}
 var cacheMRU = []
 
-function cacheUpdateMRU(id) {
-    function indexInCache(id) {
+function _h(id, df) {
+    return id + '___' + df
+}
+function cacheUpdateMRU(id, df) {
+    function indexInCache(id, df) {
         var i;
         for (i = 0; i < cacheMRU.length; i++) {
-            if (cacheMRU[i] === id) {
+            if (cacheMRU[i] === _h(id, df)) {
                 return i
             }
         }
@@ -18,13 +21,13 @@ function cacheUpdateMRU(id) {
         return -1
     }
 
-    var i = indexInCache(id)
+    var i = indexInCache(id, df)
     if (i >= 0) {
         // Is in cache
         cacheMRU.splice(i, 1)
     }
 
-    cacheMRU.push(id)
+    cacheMRU.push(_h(id, df))
 
     if (cacheMRU.length > CACHE_SIZE) {
         var f = cacheMRU.shift()
@@ -32,48 +35,32 @@ function cacheUpdateMRU(id) {
     }
 }
 
-function cacheResult(id, result) {
-    cache[id] = result
-    cacheUpdateMRU(id)
+function cacheResult(id, df, result) {
+    cache[_h(id, df)] = result
+    cacheUpdateMRU(id, df)
 }
 
-function cacheCheck(id) {
-    var result = cache[id]
+function cacheCheck(id, df) {
+    var result = cache[_h(id, df)]
     if (result != null) {
-        cacheUpdateMRU(id)
+        cacheUpdateMRU(id, df)
     }
 
     return result
 }
 
-function getData(ctx, id) {
+function getData(ctx, id, df) {
 
     function buildData(result) {
         var labels = []
         var values = []
 
-        // Decimate data by binning into MAX_BINS
-        var rawLen = result["samples"].length
-        var binSize = Math.ceil(rawLen / MAX_BINS)
-        for (var i = 0; i < MAX_BINS; i++) {
-            var sampleSlice = result["samples"].slice(binSize * i, binSize * (i + 1))
-            var avgPower = sampleSlice
-                    .reduce(function(p,c) { return c["power"] + p }, 0)
-                    / sampleSlice.length
-            values[i] = avgPower
-            labels[i] = ((sampleSlice[sampleSlice.length - 1]["freq"] +
-                    sampleSlice[0]["freq"]) / 20e5) + "Mhz"
-        }
-
-        /*
-        var labelModulus = Math.floor(len / MAX_LABELS)
-
-        for (var i = 0; i < len; i++) {
-            var e = result["samples"][i]
-            labels[i] = i % labelModulus == 0 ? e["freq"] / 10e6 + "MHz" : ""
-            values[i] = e["power"]
-        }
-        */
+       var rawLength = result["samples"].length
+       for (var i = 0; i < rawLength; i++) {
+           var smp = result["samples"][i]
+           values[i] = smp["power"]
+           labels[i] = (smp["freq"] / 10e5) + "MHz"
+       }
 
         return {
             "labels":labels,
@@ -104,7 +91,7 @@ function getData(ctx, id) {
         })
     }
 
-    var cachedResult = cacheCheck(id)
+    var cachedResult = cacheCheck(id, df)
     if (cachedResult) {
         popChart(cachedResult)
         return
@@ -112,10 +99,10 @@ function getData(ctx, id) {
 
     $.ajax({
         url: "/sample",
-        data: {"survey_id": id},
+        data: {"survey_id": id, "df": df},
         success: function(result, status) {
             var data = buildData(result)
-            cacheResult(id, data)
+            cacheResult(id, df, data)
             popChart(data)
         },
         error: function(xhr, status, error) {
@@ -143,9 +130,12 @@ $(document).ready(function() {
         }
     });
 
-    $("#dataSelector").on("change", function() {
-        var selector = $("#dataSelector")
-        var value = selector.val()
-        getData(ctx, value)
-    });
+    var updateGraph = function() {
+        var survey = $("#dataSelector").val()
+        var df = $("#decFactor").val()
+        getData(ctx, survey, df)
+    }
+
+    $("#dataSelector").on("change", updateGraph)
+    $("#decFactor").on("change", updateGraph)
 })

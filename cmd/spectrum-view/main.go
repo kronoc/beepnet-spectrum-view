@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -20,30 +21,67 @@ import (
 func sampleHandler(c *gin.Context, db *sql.DB) {
 	var resp []m.Sample
 
-	var survey_id int64
+	var surveyId int64
 
-	survey_id, err := strconv.ParseInt(c.Query("survey_id"), 0, 64)
+	surveyId, err := strconv.ParseInt(c.Query("survey_id"), 0, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
 
-	log.Printf("Retrieve survey_id = %d", survey_id)
+	// dFactor == decimation factor
+	// e.g., a dFactor of 10 would decimate a survey of 10k samples to 1k samples
+	// Default is 0, or no decimation (1 would have no effect either)
+	dFactor, err := strconv.ParseInt(c.DefaultQuery("df", "0"), 0, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	}
+
 	rows, err :=
 		db.Query(`SELECT power, freq, bandwidth
 				  FROM sample
 				  WHERE survey_id = $1
-				  ORDER BY freq`, survey_id)
+				  ORDER BY freq`, surveyId)
 	if err != nil {
 		log.Printf("Error querying sample: %q", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
 
-	for rows.Next() {
-		var sample m.Sample
-		rows.Scan(&sample.Power, &sample.Freq, &sample.Bandwidth)
-		resp = append(resp, sample)
+	rowsToSlice := func(rows *sql.Rows) []m.Sample {
+		var out []m.Sample
+		for rows.Next() {
+			var sample m.Sample
+			rows.Scan(&sample.Power, &sample.Freq, &sample.Bandwidth)
+			out = append(out, sample)
+		}
+		return out
+	}
+
+	// No binning
+	if dFactor <= 1 {
+		resp = rowsToSlice(rows)
+	} else {
+		rawSamples := rowsToSlice(rows)
+		rawLen := len(rawSamples)
+		nBins := int(math.Ceil(float64(rawLen) / float64(dFactor)))
+		for i := 0; i < int(nBins); i++ {
+			endIndex := int(dFactor) * (i + 1)
+			if endIndex > rawLen {
+				endIndex = rawLen
+			}
+			binSamples := rawSamples[int(dFactor)*i : endIndex]
+			sum := 0.0
+			for _, sample := range binSamples {
+				sum += sample.Power
+			}
+			resp = append(resp, m.Sample{
+				sum / float64(len(binSamples)),
+				(binSamples[0].Freq + binSamples[len(binSamples)-1].Freq) / 2,
+				binSamples[0].Bandwidth +
+					uint32(binSamples[len(binSamples)-1].Freq-binSamples[0].Freq),
+			})
+		}
 	}
 	c.Header("Cache-Control", "public, max-age=604800")
 	c.JSON(http.StatusOK, gin.H{"samples": resp})
@@ -72,12 +110,12 @@ func surveyHandler(c *gin.Context, db *sql.DB) {
 	c.JSON(http.StatusOK, gin.H{"surveys": resp})
 }
 
-type IncomingUpload struct {
-	Survey  m.Survey         `json:"survey"`
-	Samples []m.SampleVector `json:"samples"`
-}
-
 func uploadHandler(c *gin.Context, db *sql.DB) {
+	type IncomingUpload struct {
+		Survey  m.Survey         `json:"survey"`
+		Samples []m.SampleVector `json:"samples"`
+	}
+
 	var file multipart.File
 
 	file, _, err := c.Request.FormFile("file")
@@ -132,8 +170,8 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 		batchSize := 5000
 
 		for i, sampleVec := range inc.Samples {
-			batch_i := i % batchSize
-			if batch_i == 0 {
+			batchI := i % batchSize
+			if batchI == 0 {
 				// Beginning of batch
 				buffer.Reset()
 				buffer.WriteString(preamble)
@@ -144,7 +182,7 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 				fmt.Sprintf("(%f, %d, %d, %d)",
 					sample.Power, sample.Freq, sample.Bandwidth, surveyID))
 
-			if batch_i == batchSize-1 || i == len(inc.Samples)-1 {
+			if batchI == batchSize-1 || i == len(inc.Samples)-1 {
 				// End of batch
 				if _, err := tx.Exec(buffer.String()); err != nil {
 					rollbackAndExit(err)
