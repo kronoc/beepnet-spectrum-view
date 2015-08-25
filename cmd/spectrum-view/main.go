@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -18,10 +19,77 @@ import (
 	m "github.com/beep/beepnet-spectrum-view/model"
 )
 
+func longSampleHandler(c *gin.Context, db *sql.DB) {
+	type LongSample struct {
+		Power float64   `json:"power"`
+		Time  time.Time `json:"time"`
+	}
+
+	var resp []LongSample
+
+	freq, err := strconv.ParseInt(c.Query("f"), 0, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	dFactor, err := strconv.ParseInt(c.DefaultQuery("df", "0"), 0, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	nSamples, err := strconv.ParseInt(c.DefaultQuery("n", "0"), 0, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	rows, err :=
+		db.Query(`
+				SELECT smp.power, sv.time from sample smp, survey sv
+				WHERE smp.survey_id = sv.id AND freq = $1 AND decfactor = $2
+				ORDER BY time`, freq, dFactor)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	var sampCount int
+	err = db.QueryRow(`
+			SELECT count(*) FROM sample smp, survey sv
+			WHERE smp.survey_id = sv.id AND freq = $1 AND decfactor = $2`,
+		freq, dFactor).Scan(&sampCount)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	sampMod := int(math.Floor(float64(sampCount) / float64(nSamples)))
+
+	log.Printf("Sample Modulus: %d", sampMod)
+
+	rowsToSlice := func(rows *sql.Rows) []LongSample {
+		var out []LongSample
+		for n := 0; rows.Next(); n++ {
+			if nSamples != 0 && (n%sampMod != 0) {
+				continue
+			}
+			var sample LongSample
+			rows.Scan(&sample.Power, &sample.Time)
+			out = append(out, sample)
+		}
+		return out
+	}
+
+	resp = rowsToSlice(rows)
+
+	c.Header("Cache-Control", "public, max-age=604800")
+	c.JSON(http.StatusOK, gin.H{"samples": resp})
+}
+
 func sampleHandler(c *gin.Context, db *sql.DB) {
 	var resp []m.Sample
-
-	var surveyId int64
 
 	surveyId, err := strconv.ParseInt(c.Query("survey_id"), 0, 64)
 	if err != nil {
@@ -240,6 +308,10 @@ func main() {
 
 	router.GET("/sample", func(c *gin.Context) {
 		sampleHandler(c, db)
+	})
+
+	router.GET("/longsample", func(c *gin.Context) {
+		longSampleHandler(c, db)
 	})
 
 	router.POST("/upload", func(c *gin.Context) {

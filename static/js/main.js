@@ -2,12 +2,13 @@ var CACHE_SIZE = 1000
 var MAX_LABELS = 20
 var MAX_BINS = 100
 
+var isTimeSeries = false
 var chart = null
 var cache = {}
 var cacheMRU = []
 
-function _h(id, df) {
-    return id + '___' + df
+function _h(id, df, ts) {
+    return (ts ? 'ts_' : 'sp_') + id + '___' + df
 }
 
 function showLoading(show) {
@@ -18,8 +19,8 @@ function showLoading(show) {
     }
 }
 
-function cacheUpdateMRU(id, df) {
-    function indexInCache(id, df) {
+function cacheUpdateMRU(id, df, ts) {
+    function indexInCache(id, df, ts) {
         var i;
         for (i = 0; i < cacheMRU.length; i++) {
             if (cacheMRU[i] === _h(id, df)) {
@@ -30,13 +31,13 @@ function cacheUpdateMRU(id, df) {
         return -1
     }
 
-    var i = indexInCache(id, df)
+    var i = indexInCache(id, df, ts)
     if (i >= 0) {
         // Is in cache
         cacheMRU.splice(i, 1)
     }
 
-    cacheMRU.push(_h(id, df))
+    cacheMRU.push(_h(id, df, ts))
 
     if (cacheMRU.length > CACHE_SIZE) {
         var f = cacheMRU.shift()
@@ -44,21 +45,21 @@ function cacheUpdateMRU(id, df) {
     }
 }
 
-function cacheResult(id, df, result) {
-    cache[_h(id, df)] = result
-    cacheUpdateMRU(id, df)
+function cacheResult(id, df, ts, result) {
+    cache[_h(id, df, ts)] = result
+    cacheUpdateMRU(id, df, ts)
 }
 
-function cacheCheck(id, df) {
-    var result = cache[_h(id, df)]
+function cacheCheck(id, df, ts) {
+    var result = cache[_h(id, df, ts)]
     if (result != null) {
-        cacheUpdateMRU(id, df)
+        cacheUpdateMRU(id, df, ts)
     }
 
     return result
 }
 
-function getData(ctx, id, df) {
+function getData(ctx, id, df, ts) {
 
     function buildData(result) {
         var labels = []
@@ -68,7 +69,11 @@ function getData(ctx, id, df) {
        for (var i = 0; i < rawLength; i++) {
            var smp = result["samples"][i]
            values[i] = smp["power"]
-           labels[i] = (smp["freq"] / 10e5) + "MHz"
+           if (ts) {
+               labels[i] = smp["time"]
+           } else {
+               labels[i] = (smp["freq"] / 10e5) + "MHz"
+           }
        }
 
         return {
@@ -101,21 +106,28 @@ function getData(ctx, id, df) {
         showLoading(false)
     }
 
-    var cachedResult = cacheCheck(id, df)
+    var cachedResult = cacheCheck(id, df, ts)
     if (cachedResult) {
         popChart(cachedResult)
         return
     }
 
+    var url = ts ? "/longsample" : "/sample"
+
+    // Reserve some pixels for each label in longitudinal view
+    var data = ts ? {"f": id, "df": df, "n": Math.floor(window.innerWidth / 25)} :
+        {"survey_id": id, "df": df}
+
     $.ajax({
-        url: "/sample",
-        data: {"survey_id": id, "df": df},
+        url: url,
+        data: data,
         success: function(result, status) {
             var data = buildData(result)
-            cacheResult(id, df, data)
+            cacheResult(id, df, ts, data)
             popChart(data)
         },
         error: function(xhr, status, error) {
+            showLoading(false)
             console.log("error => ", xhr, status, error)
         }
     });
@@ -140,13 +152,24 @@ $(document).ready(function() {
         }
     });
 
-    var updateGraph = function() {
+    var updateGraphCross = function() {
         var survey = $("#dataSelector").val()
         var df = $("#decFactor").val()
         showLoading(true)
-        getData(ctx, survey, df)
+        getData(ctx, survey, df, false)
     }
 
-    $("#dataSelector").on("change", updateGraph)
-    $("#decFactor").on("change", updateGraph)
+    $("#dataSelector").on("change", updateGraphCross)
+    $("#decFactor").on("change", updateGraphCross)
+    $("#canvas").on("click", function(evt) {
+        if (isTimeSeries) {
+            return
+        }
+        var activePoints = chart.getPointsAtEvent(evt)
+        var df = $("#decFactor").val()
+        console.log(activePoints)
+        showLoading(true)
+        var freq = Math.round(parseFloat(activePoints[0].label.replace("MHz","")) * 10e5)
+        getData(ctx, freq, df, true)
+    })
 })
