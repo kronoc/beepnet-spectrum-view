@@ -37,11 +37,12 @@ func sampleHandler(c *gin.Context, db *sql.DB) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	}
 
+	log.Printf("Retrieve Survey ID(%d) DF(%d)", surveyId, dFactor)
 	rows, err :=
 		db.Query(`SELECT power, freq, bandwidth
 				  FROM sample
-				  WHERE survey_id = $1
-				  ORDER BY freq`, surveyId)
+				  WHERE survey_id = $1 AND decfactor = $2
+				  ORDER BY freq`, surveyId, dFactor)
 	if err != nil {
 		log.Printf("Error querying sample: %q", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
@@ -58,31 +59,8 @@ func sampleHandler(c *gin.Context, db *sql.DB) {
 		return out
 	}
 
-	// No binning
-	if dFactor <= 1 {
-		resp = rowsToSlice(rows)
-	} else {
-		rawSamples := rowsToSlice(rows)
-		rawLen := len(rawSamples)
-		nBins := int(math.Ceil(float64(rawLen) / float64(dFactor)))
-		for i := 0; i < int(nBins); i++ {
-			endIndex := int(dFactor) * (i + 1)
-			if endIndex > rawLen {
-				endIndex = rawLen
-			}
-			binSamples := rawSamples[int(dFactor)*i : endIndex]
-			sum := 0.0
-			for _, sample := range binSamples {
-				sum += sample.Power
-			}
-			resp = append(resp, m.Sample{
-				sum / float64(len(binSamples)),
-				(binSamples[0].Freq + binSamples[len(binSamples)-1].Freq) / 2,
-				binSamples[0].Bandwidth +
-					uint32(binSamples[len(binSamples)-1].Freq-binSamples[0].Freq),
-			})
-		}
-	}
+	resp = rowsToSlice(rows)
+
 	c.Header("Cache-Control", "public, max-age=604800")
 	c.JSON(http.StatusOK, gin.H{"samples": resp})
 }
@@ -90,7 +68,7 @@ func sampleHandler(c *gin.Context, db *sql.DB) {
 func surveyHandler(c *gin.Context, db *sql.DB) {
 	var resp []m.Survey
 
-	rows, err := db.Query(`SELECT * FROM survey`)
+	rows, err := db.Query(`SELECT id, label, location, time FROM survey`)
 	if err != nil {
 		log.Printf("Error querying survey: %q", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
@@ -133,6 +111,8 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 		return
 	}
 
+	incoming.Survey.RawData = string(buf.Bytes())
+
 	insertDone := make(chan error)
 
 	go func(db *sql.DB, inc *IncomingUpload, insertDone chan error) {
@@ -153,43 +133,63 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 		}
 
 		var surveyID int
-		err = tx.QueryRow(`INSERT INTO survey
-				(label, location, time)
-				VALUES ($1, $2, $3)
-				RETURNING id`,
-			inc.Survey.Label, inc.Survey.Location.String(),
-			inc.Survey.Time).Scan(&surveyID)
-
+		surveyID, err = inc.Survey.WriteToDB(tx)
 		if err != nil {
 			rollbackAndExit(err)
 			return
 		}
 
 		var buffer bytes.Buffer
-		preamble := `INSERT INTO sample (power, freq, bandwidth, survey_id) VALUES `
-		batchSize := 5000
+		preamble := `INSERT INTO sample (power, freq, bandwidth, decfactor, survey_id) VALUES `
+		batchSize := 500
 
-		for i, sampleVec := range inc.Samples {
-			batchI := i % batchSize
-			if batchI == 0 {
-				// Beginning of batch
-				buffer.Reset()
-				buffer.WriteString(preamble)
+		// Decimate the samples with all default decimation factors
+		for _, df := range m.DefaultDecimationFactors() {
+			log.Printf("DF = %d", df)
+			// Decimation
+			var dSamples []m.Sample
+			rawLen := len(inc.Samples)
+			nBins := int(math.Ceil(float64(rawLen) / float64(df)))
+			for i := 0; i < int(nBins); i++ {
+				endIndex := int(df) * (i + 1)
+				if endIndex > rawLen {
+					endIndex = rawLen
+				}
+				binSamples := inc.Samples[int(df)*i : endIndex]
+				sum := 0.0
+				for _, sample := range binSamples {
+					sum += sample[0] // Power
+				}
+				dSamples = append(dSamples, m.Sample{
+					sum / float64(len(binSamples)),
+					uint64((binSamples[0][1] + binSamples[len(binSamples)-1][1]) / 2),
+					uint32(binSamples[0][2]) +
+						uint32(binSamples[len(binSamples)-1][1]-binSamples[0][1]),
+				})
 			}
 
-			sample := sampleVec.ToSample()
-			buffer.WriteString(
-				fmt.Sprintf("(%f, %d, %d, %d)",
-					sample.Power, sample.Freq, sample.Bandwidth, surveyID))
-
-			if batchI == batchSize-1 || i == len(inc.Samples)-1 {
-				// End of batch
-				if _, err := tx.Exec(buffer.String()); err != nil {
-					rollbackAndExit(err)
-					return
+			// Save to DB
+			for i, sample := range dSamples {
+				batchI := i % batchSize
+				if batchI == 0 {
+					// Beginning of batch
+					buffer.Reset()
+					buffer.WriteString(preamble)
 				}
-			} else {
-				buffer.WriteRune(',')
+
+				buffer.WriteString(
+					fmt.Sprintf("(%f, %d, %d, %d, %d)",
+						sample.Power, sample.Freq, sample.Bandwidth, df, surveyID))
+
+				if batchI == batchSize-1 || i == len(dSamples)-1 {
+					// End of batch
+					if _, err := tx.Exec(buffer.String()); err != nil {
+						rollbackAndExit(err)
+						return
+					}
+				} else {
+					buffer.WriteRune(',')
+				}
 			}
 		}
 
@@ -197,9 +197,6 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 			rollbackAndExit(err)
 			return
 		}
-
-		log.Printf("Survey %q ingested with %d samples",
-			inc.Survey.Label, len(inc.Samples))
 
 		insertDone <- nil
 	}(db, &incoming, insertDone)
@@ -230,8 +227,10 @@ func main() {
 	router.Static("/static", "static")
 
 	router.GET("/", func(c *gin.Context) {
+		decFactors := m.DefaultDecimationFactors()
 		c.HTML(http.StatusOK, "index.tmpl.html", gin.H{
-			"title": "Spectrum Viewer",
+			"title":       "Spectrum Viewer",
+			"dec_factors": decFactors,
 		})
 	})
 

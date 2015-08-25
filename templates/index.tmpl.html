@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
     <head>
-        <title>Spectrum Viewer</title>
+        <title>{{ .title }}</title>
         <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
         <script src="/static/js/Chart.js"></script>
         <style type="text/css">
@@ -15,6 +15,11 @@
                 background-color:grey;
                 text-align: center;
                 float: left;
+                visibility: hidden;
+            }
+
+            #decFactor {
+                width: 150px
             }
         </style>
     </head>
@@ -25,8 +30,10 @@
         </div>
         <!-- <img style="width:98%; margin-left: 32px" src="freq_alloc.jpg"> -->
         <div id="inputArea">
-            <p><select id="dataSelector" size="10"> </select></p>
-            <p>Decimation Factor <input id="decFactor" type="number" value="500"/></p>
+            <select id="dataSelector" size="10"> </select>
+            <select id="decFactor" size="3">
+                {{range .dec_factors}} <option value="{{.}}">{{.}}</option>{{end}}
+            </select></p>
         </div>
     <script src="/static/js/main.js"></script>
     </body>
