@@ -136,7 +136,10 @@ func sampleHandler(c *gin.Context, db *sql.DB) {
 func surveyHandler(c *gin.Context, db *sql.DB) {
 	var resp []m.Survey
 
-	rows, err := db.Query(`SELECT id, label, location, time FROM survey`)
+	rows, err := db.Query(`
+			SELECT id, label, location, time
+			FROM survey
+			ORDER BY time`)
 	if err != nil {
 		log.Printf("Error querying survey: %q", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
