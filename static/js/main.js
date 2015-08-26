@@ -146,7 +146,7 @@ $(document).ready(function() {
                 var item = document.createElement("option")
                 var surveyObj = result["surveys"][i]
                 item.value = surveyObj["id"]
-                item.innerHTML = surveyObj["label"]
+                item.innerHTML = new Date(surveyObj["time"]).toString()
                 selector.append(item)
             }
         }
@@ -156,6 +156,9 @@ $(document).ready(function() {
         var survey = $("#dataSelector").val()
         //var df = $("#decFactor").val()
         var df = 400
+        var selector = $("#dataSelector")[0]
+        var selectIndex = selector.selectedIndex
+        $("#chartTitle")[0].innerHTML = "Power/Frequency @ " + selector.children[selectIndex].innerHTML
         showLoading(true)
         getData(ctx, survey, df, false)
     }
@@ -170,9 +173,10 @@ $(document).ready(function() {
         var activePoints = chart.getPointsAtEvent(evt)
         // var df = $("#decFactor").val()
         var df = 400
-        console.log(activePoints)
-        showLoading(true)
         var freq = Math.round(parseFloat(activePoints[0].label.replace("MHz","")) * 10e5)
+        var freqString = sprintf("%.3fMHz", freq / 10e5)
+        $("#chartTitle")[0].innerHTML = freqString + "/Time"
+        showLoading(true)
         getData(ctx, freq, df, true)
     })
 })
