@@ -147,7 +147,7 @@ $(document).ready(function() {
                 var item = document.createElement("option")
                 var surveyObj = result["surveys"][i]
                 item.value = surveyObj["id"]
-                item.innerHTML = new Date(surveyObj["time"]).toString()
+                item.innerHTML = new Date(surveyObj["time"]).toString().replace("GMT-0700 (PDT)","")
                 selector.append(item)
             }
         }

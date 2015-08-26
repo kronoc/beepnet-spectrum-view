@@ -12,21 +12,31 @@
                 width: 100%;
                 height: auto;
             }
+
+            body {
+                padding-top: 40px;
+            }
         </style>
     </head>
     <body>
+        <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header navbar-right">
+                <span class="navbar-brand">UHF Activity in the Mission, San Francisco</span>
+            </div>
+        </div>
+        </nav>
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-3">
                     <div class="form-group">
-                        <h3>Survey<br><small>Select a survey</small></h3>
+                        <h3>Survey<br><small>Times are in PDT (UTC-0700)</small></h3>
                         <select id="dataSelector" class="form-control" size="5"> </select>
                     </div>
                 </div>
                 <div class="col-md-9" id="chartArea">
                     <h3 id="chartTitle">(Select a survey)</h3>
                     <canvas id="canvas" height="200" width="300"></canvas>
-                    <h3>
                 </div>
             </div>
             <div class="row">
@@ -35,7 +45,7 @@
                         <div class="panel-heading">
                             <h3>What is this?</h3>
                         </div>
-                        <div class="panel-body"><p>A continuous survey of RF spectral power data across the 300MHz-3GHz band at/near <a href="https://www.google.com/maps/place/2519+Mission+St,+San+Francisco,+CA+94110" target="_blank">our office</a> in San Francisco.</p>
+                        <div class="panel-body"><p>A continuous survey of RF spectral power data across the 300MHz-3GHz (UHF) band at/near <a href="https://www.google.com/maps/place/2519+Mission+St,+San+Francisco,+CA+94110" target="_blank">our office</a> in San Francisco.</p>
                             <p> View the entire spectrum at a certain point in time, or click on a point to see power in that band over time.</p>
                         </div>
                     </div>
@@ -55,7 +65,7 @@
                             <h3>Where can I get your code?</h3>
                         </div>
                         <div class="panel-body"><p>Our code is currently publicly unavailable, but we do plan on making the collection software available and providing upload API keys for anyone interested in helping us expand our survey.</p>
-                            <p>Send us an email at <a href="team@thisisbeep.com">team@thisisbeep.com</a> to get set up.</p>
+                            <p>Send us an email at <a href="mailto://spectrum@thisisbeep.com">spectrum@thisisbeep.com</a> to get set up.</p>
                         </div>
                     </div>
                 </div>
