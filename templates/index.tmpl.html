@@ -10,7 +10,7 @@
         <style type="text/css">
             canvas {
                 width: 100%;
-                height: auto
+                height: auto;
             }
         </style>
     </head>
@@ -35,7 +35,7 @@
                         <div class="panel-heading">
                             <h3>What is this?</h3>
                         </div>
-                        <div class="panel-body"><p>A continuous survey of RF spectral power data across the 300MHz-3GHz band at/near our office in San Francisco.</p>
+                        <div class="panel-body"><p>A continuous survey of RF spectral power data across the 300MHz-3GHz band at/near <a href="https://www.google.com/maps/place/2519+Mission+St,+San+Francisco,+CA+94110" target="_blank">our office</a> in San Francisco.</p>
                             <p> View the entire spectrum at a certain point in time, or click on a point to see power in that band over time.</p>
                         </div>
                     </div>
@@ -45,7 +45,7 @@
                         <div class="panel-heading">
                             <h3>How did you collect this data?</h3>
                         </div>
-                        <div class="panel-body"><p>We're using a BladeRF SDR  and a wide-band antenna connected to a Macbook Air to collect spectral power information using a modified version of <code>osmocom_spectrum_sense</code>.</p>
+                        <div class="panel-body"><p>We're using a <a href="https://www.nuand.com/blog/product/bladerf-x115/" target="_blank">BladeRF SDR</a>  and a wide-band antenna connected to a laptop to collect spectral power information using a modified version of <code>osmocom_spectrum_sense</code>.</p>
                         </div>
                     </div>
                 </div>
@@ -54,18 +54,19 @@
                         <div class="panel-heading">
                             <h3>Where can I get your code?</h3>
                         </div>
-                        <div class="panel-body"><p>Our code is currently publicly unavailable, but we do plan on making the collection software available and providing upload keys for anyone interested in helping us expand our survey.</p>
+                        <div class="panel-body"><p>Our code is currently publicly unavailable, but we do plan on making the collection software available and providing upload API keys for anyone interested in helping us expand our survey.</p>
                             <p>Send us an email at <a href="team@thisisbeep.com">team@thisisbeep.com</a> to get set up.</p>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div style="width:100%;">
-            <div id="loadingOverlay"> Loading... </div>
-        </div>
-        <!-- <img style="width:98%; margin-left: 32px" src="freq_alloc.jpg"> -->
-        <div id="inputArea">
+            <div class="row">
+                <div class="col-md-12">
+                    <p class="text-center">
+                    <span class="glyphicon glyphicon-copyright-mark"></span> Beep, Inc. 2015.  For demonstration purposes only.  Beep, Inc. provides no guarantee of accuracy or correctness nor assumes liability for any usage of this data or its derivatives.
+                    </p>
+                </div>
+            </div>
         </div>
     <script src="/static/js/main.js"></script>
     </body>
