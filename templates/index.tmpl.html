@@ -2,38 +2,69 @@
 <html>
     <head>
         <title>{{ .title }}</title>
-        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+        <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
         <script src="/static/js/Chart.js"></script>
         <style type="text/css">
-            #loadingOverlay {
-                left:50%;
-                width:100px;
-                -webkit-transform: translate(-50%, -50%);
-                -moz-transform: translate(-50%, -50%);
-                transform: translate(-50%, -50%);
-                position:relative;
-                background-color:grey;
-                text-align: center;
-                float: left;
-                visibility: hidden;
-            }
-
-            #decFactor {
-                width: 150px
+            canvas {
+                width: 100%;
+                height: auto
             }
         </style>
     </head>
     <body>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <h3>Survey<br><small>Select a survey</small></h3>
+                        <select id="dataSelector" class="form-control" size="5"> </select>
+                    </div>
+                </div>
+                <div class="col-md-9" id="chartArea">
+                    <h3>Chart Title</h3>
+                    <canvas id="canvas" height="200" width="300"></canvas>
+                    <h3>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3>What is this?</h3>
+                        </div>
+                        <div class="panel-body"><p>A continuous survey of RF spectral power data across the 300MHz-3GHz band at/near our office in San Francisco.</p>
+                            <p> View the entire spectrum at a certain point in time, or click on a point to see power in that band over time.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3>How did you collect this data?</h3>
+                        </div>
+                        <div class="panel-body"><p>We're using a BladeRF SDR  and a wide-band antenna connected to a Macbook Air to collect spectral power information using a modified version of <code>osmocom_spectrum_sense</code>.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3>Where can I get your code?</h3>
+                        </div>
+                        <div class="panel-body"><p>Our code is currently publicly unavailable, but we do plan on making the collection software available and providing upload keys for anyone interested in helping us expand our survey.</p>
+                            <p>Send us an email at <a href="team@thisisbeep.com">team@thisisbeep.com</a> to get set up.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div style="width:100%;">
             <div id="loadingOverlay"> Loading... </div>
-            <canvas id="canvas" height="300" width="1000"></canvas>
         </div>
         <!-- <img style="width:98%; margin-left: 32px" src="freq_alloc.jpg"> -->
         <div id="inputArea">
-            <select id="dataSelector" size="10"> </select>
-            <select id="decFactor" size="3">
-                {{range .dec_factors}} <option value="{{.}}">{{.}}</option>{{end}}
-            </select></p>
         </div>
     <script src="/static/js/main.js"></script>
     </body>

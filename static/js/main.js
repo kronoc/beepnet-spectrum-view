@@ -96,10 +96,10 @@ function getData(ctx, id, df, ts) {
         }
         chart = new Chart(ctx).Line(data, {
             pointHitDetectionRadius: 1,
-            responsive: true,
+            responsive: false,
             animation: false,
             scaleOverride: true,
-            scaleSteps: 8,
+            scaleSteps: 6,
             scaleStepWidth: 5,
             scaleStartValue: 0
         })
@@ -146,7 +146,7 @@ $(document).ready(function() {
                 var item = document.createElement("option")
                 var surveyObj = result["surveys"][i]
                 item.value = surveyObj["id"]
-                item.innerHTML = surveyObj["label"] + " @ " + surveyObj["time"]
+                item.innerHTML = surveyObj["label"]
                 selector.append(item)
             }
         }
@@ -154,11 +154,13 @@ $(document).ready(function() {
 
     var updateGraphCross = function() {
         var survey = $("#dataSelector").val()
-        var df = $("#decFactor").val()
+        //var df = $("#decFactor").val()
+        var df = 400
         showLoading(true)
         getData(ctx, survey, df, false)
     }
 
+    $("#dataSelector").height($("#chartArea").height()-130)
     $("#dataSelector").on("change", updateGraphCross)
     $("#decFactor").on("change", updateGraphCross)
     $("#canvas").on("click", function(evt) {
@@ -166,7 +168,8 @@ $(document).ready(function() {
             return
         }
         var activePoints = chart.getPointsAtEvent(evt)
-        var df = $("#decFactor").val()
+        // var df = $("#decFactor").val()
+        var df = 400
         console.log(activePoints)
         showLoading(true)
         var freq = Math.round(parseFloat(activePoints[0].label.replace("MHz","")) * 10e5)
