@@ -65,7 +65,15 @@ func longSampleHandler(c *gin.Context, db *sql.DB) {
 		return
 	}
 
-	sampMod := int(math.Floor(float64(sampCount) / float64(nSamples)))
+	var sampMod int
+	if nSamples > 0 {
+		sampMod = int(math.Floor(float64(sampCount) / float64(nSamples)))
+	}
+
+	// Guard against not enough samples to fulfill nSamples
+	if sampMod == 0 {
+		sampMod = 1
+	}
 
 	log.Printf("Sample Modulus: %d", sampMod)
 
