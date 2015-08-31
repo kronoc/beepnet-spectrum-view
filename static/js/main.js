@@ -2,10 +2,16 @@ var CACHE_SIZE = 1000
 var MAX_LABELS = 20
 var MAX_BINS = 100
 
+var surveyLUT = {}
 var isTimeSeries = false
 var chart = null
 var cache = {}
 var cacheMRU = []
+
+function fixTime(timeString) {
+    var ts = new Date(new Date(timeString).getTime() + (1000*60*60*7))
+    return ts.toString().replace("GMT-0700 (PDT)","")
+}
 
 function _h(id, df, ts) {
     return (ts ? 'ts_' : 'sp_') + id + '___' + df
@@ -70,7 +76,7 @@ function getData(ctx, id, df, ts) {
            var smp = result["samples"][i]
            values[i] = smp["power"]
            if (ts) {
-               labels[i] = smp["time"]
+               labels[i] = fixTime(smp["time"])
            } else {
                labels[i] = (smp["freq"] / 10e5) + "MHz"
            }
@@ -91,18 +97,31 @@ function getData(ctx, id, df, ts) {
     }
 
     function popChart(data) {
-        if (chart != null) {
-            chart.destroy()
+        if (chart == null || chart.datasets[0].points.length != data['labels'].length) {
+            if (chart != null) {
+                chart.destroy()
+            }
+
+            chart = new Chart(ctx).Line(data, {
+                pointHitDetectionRadius: 1,
+                responsive: false,
+                animation: $("#animateGraph")[0].checked,
+                scaleOverride: true,
+                scaleSteps: 6,
+                scaleStepWidth: 5,
+                scaleStartValue: 0
+            })
+        } else {
+            var len = data['labels'].length
+            var values = data['datasets'][0]['data']
+            for (var i = 0; i < len; i++) {
+                chart.datasets[0].points[i].label = data['labels'][i]
+                chart.datasets[0].points[i].value = values[i]
+            }
+            chart.options.animation = $("#animateGraph")[0].checked
+            chart.update()
         }
-        chart = new Chart(ctx).Line(data, {
-            pointHitDetectionRadius: 1,
-            responsive: false,
-            animation: false,
-            scaleOverride: true,
-            scaleSteps: 6,
-            scaleStepWidth: 5,
-            scaleStartValue: 0
-        })
+        isTimeSeries = ts
         showLoading(false)
     }
 
@@ -146,8 +165,11 @@ $(document).ready(function() {
             for (var i = 0; i < len; i++) {
                 var item = document.createElement("option")
                 var surveyObj = result["surveys"][i]
-                item.value = surveyObj["id"]
-                item.innerHTML = new Date(surveyObj["time"]).toString().replace("GMT-0700 (PDT)","")
+                var label = fixTime(surveyObj["time"])
+                var id = surveyObj["id"]
+                surveyLUT[label] = i
+                item.value = id
+                item.innerHTML = label
                 selector.append(item)
             }
         }
@@ -164,20 +186,28 @@ $(document).ready(function() {
         getData(ctx, survey, df, false)
     }
 
-    $("#dataSelector").height($("#chartArea").height()-130)
+    $("#dataSelector").height($("#chartArea").height()-190)
     $("#dataSelector").on("change", updateGraphCross)
     $("#decFactor").on("change", updateGraphCross)
     $("#canvas").on("click", function(evt) {
-        if (isTimeSeries) {
+        var activePoints = chart.getPointsAtEvent(evt)
+        if (!activePoints.length) {
             return
         }
-        var activePoints = chart.getPointsAtEvent(evt)
-        // var df = $("#decFactor").val()
         var df = 400
-        var freq = Math.round(parseFloat(activePoints[0].label.replace("MHz","")) * 10e5)
-        var freqString = sprintf("%.3fMHz", freq / 10e5)
-        $("#chartTitle")[0].innerHTML = freqString + "/Time"
-        showLoading(true)
-        getData(ctx, freq, df, true)
+
+        if (isTimeSeries) {
+            var id = surveyLUT[activePoints[0].label]
+            console.log(">>> Label " + activePoints[0].label + " is mapped to " + id)
+            $("#dataSelector")[0].selectedIndex = id
+            updateGraphCross()
+        } else {
+            // var df = $("#decFactor").val()
+            var freq = Math.round(parseFloat(activePoints[0].label.replace("MHz","")) * 10e5)
+            var freqString = sprintf("%.3fMHz", freq / 10e5)
+            $("#chartTitle")[0].innerHTML = freqString + "/Time"
+            showLoading(true)
+            getData(ctx, freq, df, true)
+        }
     })
 })
