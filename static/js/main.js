@@ -217,7 +217,6 @@ $(document).ready(function() {
 
         if (isTimeSeries) {
             var id = surveyLUT[activePoints[0].label]
-            console.log(">>> Label " + activePoints[0].label + " is mapped to " + id)
             $("#dataSelector")[0].selectedIndex = id
             updateGraphCross()
         } else {
