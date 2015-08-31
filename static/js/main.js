@@ -95,11 +95,11 @@ function getData(ctx, id, df, ts) {
         return {
             "labels":labels,
             "datasets":[{
-                  "pointHighlightFill": "#fff",
+                  "strokeColor": "#000",
                   "fillColor": "rgba(0,0,0,0.2)",
-                  "pointHighlightStroke": "rgba(0,0,0,1.0)",
-                  "pointColor": "rgba(0,0,0,1.0)",
-                  "strokeColor": "rgba(0,0,0,1.0)",
+                  "pointHighlightStroke": "#d06f5a",
+                  "pointHighlightFill": "#fff",
+                  "pointColor": "#276389",
                   "pointStrokeColor": "#fff",
                   "data": values
             }]
@@ -113,9 +113,11 @@ function getData(ctx, id, df, ts) {
             }
 
             chart = new Chart(ctx).Line(data, {
+                pointDotRadius: 4,
                 pointHitDetectionRadius: 1,
                 responsive: false,
                 animation: $("#animateGraph")[0].checked,
+                bezierCurve: false,
                 scaleOverride: true,
                 scaleSteps: 6,
                 scaleStepWidth: 5,
