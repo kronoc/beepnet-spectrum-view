@@ -3,7 +3,10 @@ var MAX_LABELS = 20
 var MAX_BINS = 100
 
 var surveyLUT = {}
+
 var isTimeSeries = false
+
+var updateGraphTimeout = null
 var chart = null
 var cache = {}
 var cacheMRU = []
@@ -193,9 +196,18 @@ $(document).ready(function() {
         getData(ctx, survey, df, false)
     }
 
+    var scheduleUpdateGraphCross = function() {
+        if (updateGraphTimeout != null) {
+            clearTimeout(updateGraphTimeout)
+            updateGraphTimeout = null
+        }
+
+        updateGraphTimeout = setTimeout(updateGraphCross, 250)
+    }
+
     $("#dataSelector").height($("#chartArea").height()-190)
-    $("#dataSelector").on("change", updateGraphCross)
-    $("#decFactor").on("change", updateGraphCross)
+    $("#dataSelector").on("change", scheduleUpdateGraphCross)
+    $("#decFactor").on("change", scheduleUpdateGraphCross)
     $("#canvas").on("click", function(evt) {
         var activePoints = chart.getPointsAtEvent(evt)
         if (!activePoints.length) {
