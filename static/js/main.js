@@ -18,10 +18,17 @@ function _h(id, df, ts) {
 }
 
 function showLoading(show) {
+    /*
     if (show) {
         $('#loadingOverlay').css('visibility', 'visible')
     } else {
         $('#loadingOverlay').css('visibility', 'hidden')
+    }
+   */
+    if (show) {
+        $('#loadingOverlay').show()
+    } else {
+        $('#loadingOverlay').fadeOut(200)
     }
 }
 
