@@ -147,7 +147,7 @@ func surveyHandler(c *gin.Context, db *sql.DB) {
 	rows, err := db.Query(`
 			SELECT id, label, location, time
 			FROM survey
-			ORDER BY time`)
+			ORDER BY time DESC`)
 	if err != nil {
 		log.Printf("Error querying survey: %q", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})

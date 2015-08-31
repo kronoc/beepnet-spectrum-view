@@ -168,25 +168,6 @@ function getData(ctx, id, df, ts) {
 $(document).ready(function() {
     var ctx = $("#canvas")[0].getContext("2d")
 
-    // Populate data selector
-    $.ajax({
-        url: "/survey",
-        success: function(result) {
-            var selector = $("#dataSelector")
-            var len = result["surveys"].length;
-            for (var i = 0; i < len; i++) {
-                var item = document.createElement("option")
-                var surveyObj = result["surveys"][i]
-                var label = fixTime(surveyObj["time"])
-                var id = surveyObj["id"]
-                surveyLUT[label] = i
-                item.value = id
-                item.innerHTML = label
-                selector.append(item)
-            }
-        }
-    });
-
     var updateGraphCross = function() {
         var survey = $("#dataSelector").val()
         //var df = $("#decFactor").val()
@@ -230,4 +211,26 @@ $(document).ready(function() {
             getData(ctx, freq, df, true)
         }
     })
+
+    // Populate data selector
+    $.ajax({
+        url: "/survey",
+        success: function(result) {
+            var selector = $("#dataSelector")
+            var len = result["surveys"].length;
+            for (var i = 0; i < len; i++) {
+                var item = document.createElement("option")
+                var surveyObj = result["surveys"][i]
+                var label = fixTime(surveyObj["time"])
+                var id = surveyObj["id"]
+                surveyLUT[label] = i
+                item.value = id
+                item.innerHTML = label
+                selector.append(item)
+            }
+
+            selector[0].selectedIndex = 0
+            scheduleUpdateGraphCross()
+        }
+    });
 })
