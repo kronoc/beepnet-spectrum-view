@@ -119,8 +119,8 @@ function getData(ctx, id, df, ts) {
                 animation: $("#animateGraph")[0].checked,
                 bezierCurve: false,
                 scaleOverride: true,
-                scaleSteps: 6,
-                scaleStepWidth: 5,
+                scaleSteps: 10,
+                scaleStepWidth: 3,
                 scaleStartValue: 0
             })
         } else {
