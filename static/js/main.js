@@ -142,7 +142,7 @@ function getData(ctx, id, df, ts) {
 
     // Reserve some pixels for each label in longitudinal view
     var chartWidth = $("#chartArea").width()
-    var data = ts ? {"f": id, "df": df, "n": Math.floor(chartWidth / 25)} :
+    var data = ts ? {"f": id, "df": df, "n": Math.floor(chartWidth / 20)} :
         {"survey_id": id, "df": df}
 
     $.ajax({
