@@ -1,0 +1,170 @@
+--
+-- PostgreSQL database dump
+--
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+SET search_path = public, pg_catalog;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- Name: sample; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE sample (
+    id bigint NOT NULL,
+    power numeric NOT NULL,
+    freq bigint NOT NULL,
+    bandwidth integer NOT NULL,
+    decfactor integer DEFAULT 1 NOT NULL,
+    survey_id integer
+);
+
+
+--
+-- Name: sample_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE sample_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sample_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE sample_id_seq OWNED BY sample.id;
+
+
+--
+-- Name: survey; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE survey (
+    id integer NOT NULL,
+    label character varying(256) NOT NULL,
+    location point NOT NULL,
+    "time" timestamp without time zone NOT NULL,
+    raw_data text NOT NULL
+);
+
+
+--
+-- Name: survey_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE survey_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: survey_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE survey_id_seq OWNED BY survey.id;
+
+
+--
+-- Name: survey_tags; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE survey_tags (
+    survey_id integer,
+    tags text[] DEFAULT '{}'::text[] NOT NULL
+);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY sample ALTER COLUMN id SET DEFAULT nextval('sample_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY survey ALTER COLUMN id SET DEFAULT nextval('survey_id_seq'::regclass);
+
+
+--
+-- Name: sample_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY sample
+    ADD CONSTRAINT sample_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: survey_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY survey
+    ADD CONSTRAINT survey_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_survey_tags_survey_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE UNIQUE INDEX idx_survey_tags_survey_id ON survey_tags USING btree (survey_id);
+
+
+--
+-- Name: idx_survey_tags_tags; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX idx_survey_tags_tags ON survey_tags USING gin (tags);
+
+
+--
+-- Name: sample_survey_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY sample
+    ADD CONSTRAINT sample_survey_id_fkey FOREIGN KEY (survey_id) REFERENCES survey(id);
+
+
+--
+-- Name: survey_tags_survey_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY survey_tags
+    ADD CONSTRAINT survey_tags_survey_id_fkey FOREIGN KEY (survey_id) REFERENCES survey(id);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
