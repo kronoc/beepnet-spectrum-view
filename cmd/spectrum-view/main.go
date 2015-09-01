@@ -163,7 +163,6 @@ func surveyHandler(c *gin.Context, db *sql.DB) {
 		if err := m.StringToPoint(string(locbuf), &survey.Location); err != nil {
 			log.Printf("ERROR PARSING POINT: %s", err)
 		}
-		log.Println(survey.String())
 		resp = append(resp, survey)
 	}
 
