@@ -145,8 +145,8 @@ func surveyHandler(c *gin.Context, db *sql.DB) {
 	var resp []m.Survey
 
 	rows, err := db.Query(`
-			SELECT id, label, location, time
-			FROM survey
+			SELECT srv.id, srv.label, srv.location, srv.time, st.tags
+			FROM survey srv LEFT JOIN survey_tags st ON srv.id = st.survey_id
 			ORDER BY time DESC`)
 	if err != nil {
 		log.Printf("Error querying survey: %q", err)
@@ -157,10 +157,13 @@ func surveyHandler(c *gin.Context, db *sql.DB) {
 	for rows.Next() {
 		var survey m.Survey
 		var locbuf []byte
-		rows.Scan(&survey.Id, &survey.Label, &locbuf, &survey.Time)
+		var tagsbuf []byte
+		rows.Scan(&survey.Id, &survey.Label, &locbuf, &survey.Time, &tagsbuf)
+		survey.Tags = m.PGStringToTags(string(tagsbuf))
 		if err := m.StringToPoint(string(locbuf), &survey.Location); err != nil {
 			log.Printf("ERROR PARSING POINT: %s", err)
 		}
+		log.Println(survey.String())
 		resp = append(resp, survey)
 	}
 

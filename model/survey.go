@@ -23,6 +23,7 @@ type Survey struct {
 	Location Point     `json:"location"`
 	Time     time.Time `json:"time"`
 	RawData  string    `json:"-"`
+	Tags     TagsType  `json:"tags"`
 }
 
 // WriteToDB should be
@@ -88,6 +89,6 @@ func GetSurveyById(id int, db *sql.DB) (*Survey, error) {
 }
 
 func (s *Survey) String() string {
-	return fmt.Sprintf("%q (%d) @ (%f,%f), %s",
-		s.Label, s.Id, s.Location[0], s.Location[1], s.Time)
+	return fmt.Sprintf("%q (%d) @ (%f,%f), %s (tags: %s)",
+		s.Label, s.Id, s.Location[0], s.Location[1], s.Time, s.Tags)
 }
