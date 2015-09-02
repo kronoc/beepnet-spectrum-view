@@ -290,6 +290,44 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 	}
 }
 
+func TokenAuthMiddleware(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authFailure := func(msg string) {
+			c.String(401, msg)
+			c.Abort()
+		}
+
+		token := c.Request.FormValue("token")
+
+		if token == "" {
+			authFailure("Missing required field: token")
+			return
+		}
+
+		var uploaderId int
+		if err := db.QueryRow(`
+				SELECT id
+				FROM uploader
+				WHERE upload_key = $1`, token).Scan(&uploaderId); err != nil {
+			authFailure("Invalid token")
+			return
+		}
+
+		// uploader table has a before update trigger that updates
+		// last_access column
+		if _, err := db.Exec(`
+				UPDATE uploader
+				SET access_count = access_count + 1
+				WHERE id = $1`, uploaderId); err != nil {
+			c.String(500, "Internal server error (%s)", err)
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func main() {
 	port := os.Getenv("PORT")
 
@@ -329,6 +367,13 @@ func main() {
 	})
 
 	router.POST("/upload", func(c *gin.Context) {
+		uploadHandler(c, db)
+	})
+
+	authorized := router.Group("/priv")
+	authorized.Use(TokenAuthMiddleware(db))
+
+	authorized.POST("/upload", func(c *gin.Context) {
 		uploadHandler(c, db)
 	})
 
