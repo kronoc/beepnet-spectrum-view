@@ -366,10 +366,6 @@ func main() {
 		longSampleHandler(c, db)
 	})
 
-	router.POST("/upload", func(c *gin.Context) {
-		uploadHandler(c, db)
-	})
-
 	authorized := router.Group("/priv")
 	authorized.Use(TokenAuthMiddleware(db))
 
