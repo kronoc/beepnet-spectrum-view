@@ -170,8 +170,8 @@ $(document).ready(function() {
 
     var updateGraphCross = function() {
         var survey = $("#dataSelector").val()
-        //var df = $("#decFactor").val()
-        var df = 400
+        var df = $("#dfSelector").val()
+        //var df = 400
         var selector = $("#dataSelector")[0]
         var selectIndex = selector.selectedIndex
         $("#chartTitle")[0].innerHTML = "Power/Frequency @ " + selector.children[selectIndex].innerHTML
@@ -188,22 +188,24 @@ $(document).ready(function() {
         updateGraphTimeout = setTimeout(updateGraphCross, 250)
     }
 
-    $("#dataSelector").height($("#chartArea").height()-190)
+    // Set max reduction factor
+    $("#dfSelector")[0].selectedIndex = $("#dfSelector")[0].length - 1
+
+    $("#dataSelector").height($("#chartArea").height()-220)
     $("#dataSelector").on("change", scheduleUpdateGraphCross)
-    $("#decFactor").on("change", scheduleUpdateGraphCross)
+    $("#dfSelector").on("change", scheduleUpdateGraphCross)
     $("#canvas").on("click", function(evt) {
         var activePoints = chart.getPointsAtEvent(evt)
         if (!activePoints.length) {
             return
         }
-        var df = 400
+        var df = $("#dfSelector").val()
 
         if (isTimeSeries) {
             var id = surveyLUT[activePoints[0].label]
             $("#dataSelector")[0].selectedIndex = id
             updateGraphCross()
         } else {
-            // var df = $("#decFactor").val()
             var freq = Math.round(parseFloat(activePoints[0].label.replace("MHz","")) * 10e5)
             var freqString = sprintf("%.3fMHz", freq / 10e5)
             $("#chartTitle")[0].innerHTML = freqString + "/Time"

@@ -193,7 +193,6 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 		return
 	}
 
-	log.Println(c.Request.Header)
 	incoming.Survey.RawData = string(buf.Bytes())
 	if uploaderId, err := strconv.Atoi(c.Request.Header["X-Uploader-Id"][0]); err != nil {
 		c.String(http.StatusInternalServerError, "Missing header: X-Uploader-Id")

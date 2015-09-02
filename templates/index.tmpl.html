@@ -39,6 +39,10 @@
             .pad-extra {
                 margin-top: 25px;
             }
+
+            label {
+                font-weight: normal !important;
+            }
         </style>
     </head>
     <body>
@@ -58,12 +62,22 @@
                     <div class="form-group">
                         <h3>Survey<br><small>Times are in PDT (UTC-0700)</small></h3>
                         <select id="dataSelector" class="form-control" size="5"> </select>
+                    </div>
+                    <form class="form" role="form">
+                        <div class="form-group">
+                            <label for="dfSelector"> Reduction factor </label>
+                            <select class="form-control" id="dfSelector">
+                                {{range .dec_factors}}
+                                <option value="{{.}}">{{.}}</option>
+                                {{end}}
+                            </select>
+                        </div>
                         <div class="checkbox">
-                            <label>
+                            <label for="animateGraph">
                                 <input type="checkbox" id="animateGraph" checked="true"> Animate
                             </label>
                         </div>
-                    </div>
+                    </form>
                 </div>
                 <div class="col-md-9" id="chartArea">
                     <h3 id="chartTitle">(Select a survey)</h3>
