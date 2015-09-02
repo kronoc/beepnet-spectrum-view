@@ -25,6 +25,20 @@ COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
 
 SET search_path = public, pg_catalog;
 
+--
+-- Name: update_last_access_column(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION update_last_access_column() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.last_access = now();
+    RETURN NEW; 
+END;
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_with_oids = false;
@@ -105,6 +119,39 @@ CREATE TABLE survey_tags (
 
 
 --
+-- Name: uploader; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE uploader (
+    id integer NOT NULL,
+    created timestamp without time zone DEFAULT now() NOT NULL,
+    last_access timestamp without time zone DEFAULT now() NOT NULL,
+    access_count integer DEFAULT 0,
+    upload_key character varying(64) NOT NULL,
+    description text
+);
+
+
+--
+-- Name: uploader_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE uploader_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: uploader_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE uploader_id_seq OWNED BY uploader.id;
+
+
+--
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -116,6 +163,13 @@ ALTER TABLE ONLY sample ALTER COLUMN id SET DEFAULT nextval('sample_id_seq'::reg
 --
 
 ALTER TABLE ONLY survey ALTER COLUMN id SET DEFAULT nextval('survey_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY uploader ALTER COLUMN id SET DEFAULT nextval('uploader_id_seq'::regclass);
 
 
 --
@@ -135,6 +189,14 @@ ALTER TABLE ONLY survey
 
 
 --
+-- Name: uploader_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY uploader
+    ADD CONSTRAINT uploader_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idx_survey_tags_survey_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -146,6 +208,20 @@ CREATE UNIQUE INDEX idx_survey_tags_survey_id ON survey_tags USING btree (survey
 --
 
 CREATE INDEX idx_survey_tags_tags ON survey_tags USING gin (tags);
+
+
+--
+-- Name: idx_uploader_key; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX idx_uploader_key ON uploader USING btree (upload_key);
+
+
+--
+-- Name: update_uploader_access; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_uploader_access BEFORE UPDATE ON uploader FOR EACH ROW EXECUTE PROCEDURE update_last_access_column();
 
 
 --

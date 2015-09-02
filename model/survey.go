@@ -18,12 +18,13 @@ CREATE TABLE IF NOT EXISTS survey (
 **********************************/
 
 type Survey struct {
-	Id       int       `json:"id"`
-	Label    string    `json:"label"`
-	Location Point     `json:"location"`
-	Time     time.Time `json:"time"`
-	RawData  string    `json:"-"`
-	Tags     TagsType  `json:"tags"`
+	Id         int       `json:"id"`
+	Label      string    `json:"label"`
+	Location   Point     `json:"location"`
+	Time       time.Time `json:"time"`
+	RawData    string    `json:"-"`
+	Tags       TagsType  `json:"tags"`
+	UploaderId int       `json:"-"`
 }
 
 // WriteToDB should be
@@ -31,10 +32,10 @@ func (s *Survey) WriteToDB(tx *sql.Tx) (int, error) {
 	var surveyId int
 	if err := tx.QueryRow(`
 			INSERT INTO survey
-			(label, location, time, raw_data)
-			VALUES ($1, $2, $3, $4)
+			(label, location, time, raw_data, uploader_id)
+			VALUES ($1, $2, $3, $4, $5)
 			RETURNING id`,
-		s.Label, s.Location.String(), s.Time, s.RawData).Scan(&surveyId); err != nil {
+		s.Label, s.Location.String(), s.Time, s.RawData, s.UploaderId).Scan(&surveyId); err != nil {
 		return -1, fmt.Errorf(`DB Error: %q`, err)
 	}
 

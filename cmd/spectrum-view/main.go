@@ -193,7 +193,14 @@ func uploadHandler(c *gin.Context, db *sql.DB) {
 		return
 	}
 
+	log.Println(c.Request.Header)
 	incoming.Survey.RawData = string(buf.Bytes())
+	if uploaderId, err := strconv.Atoi(c.Request.Header["X-Uploader-Id"][0]); err != nil {
+		c.String(http.StatusInternalServerError, "Missing header: X-Uploader-Id")
+		return
+	} else {
+		incoming.Survey.UploaderId = uploaderId
+	}
 
 	insertDone := make(chan error)
 
@@ -324,6 +331,7 @@ func TokenAuthMiddleware(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		c.Request.Header.Set("X-Uploader-Id", strconv.Itoa(uploaderId))
 		c.Next()
 	}
 }
@@ -368,7 +376,6 @@ func main() {
 
 	authorized := router.Group("/priv")
 	authorized.Use(TokenAuthMiddleware(db))
-
 	authorized.POST("/upload", func(c *gin.Context) {
 		uploadHandler(c, db)
 	})
