@@ -2,7 +2,8 @@ var CACHE_SIZE = 1000
 var MAX_LABELS = 20
 var MAX_BINS = 100
 
-var surveyLUT = {}
+var labelLUT = {}
+var idLUT = {}
 
 var isTimeSeries = false
 
@@ -228,7 +229,7 @@ $(document).ready(function() {
         var df = $("#dfSelector").val()
 
         if (isTimeSeries) {
-            var id = surveyLUT[activePoints[0].label]
+            var id = labelLUT[activePoints[0].label]
             $("#dataSelector")[0].selectedIndex = id
             updateGraphCrossForm()
         } else {
@@ -241,16 +242,8 @@ $(document).ready(function() {
     var qFreq = parseInt(getUrlParameter('freq','-1'))
     var qDf = parseInt(getUrlParameter('df','400'))
 
-    var reqData = {}
-    if (qSurveyId > 0) {
-        $('#formArea').hide()
-        $('#chartArea').removeClass().addClass('col-md-12')
-        reqData['id'] = qSurveyId
-    }
-
     $.ajax({
         url: "/survey",
-        data: reqData,
         success: function(result) {
             var selector = $("#dataSelector")
             var len = result["surveys"].length;
@@ -259,7 +252,8 @@ $(document).ready(function() {
                 var surveyObj = result["surveys"][i]
                 var label = fixTime(surveyObj["time"])
                 var id = surveyObj["id"]
-                surveyLUT[label] = i
+                labelLUT[label] = i
+                idLUT[id] = i
                 item.value = id
                 item.innerHTML = label
                 selector.append(item)
@@ -270,6 +264,9 @@ $(document).ready(function() {
             if (qFreq > 0) {
                 updateGraphLong(qFreq, qDf)
             } else {
+                if (qSurveyId > 0) {
+                    selector[0].selectedIndex = idLUT[qSurveyId]
+                }
                 scheduleUpdateGraphCross()
             }
         }
