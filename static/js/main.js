@@ -11,6 +11,24 @@ var chart = null
 var cache = {}
 var cacheMRU = []
 
+// From: http://www.jquerybyexample.net/2012/06/get-url-parameters-using-jquery.html
+function getUrlParameter(sParam, defValue) {
+    var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : sParameterName[1];
+        }
+    }
+
+    return defValue
+}
+
 function fixTime(timeString) {
     var ts = new Date(new Date(timeString).getTime() + (1000*60*60*7))
     return ts.toString().replace("GMT-0700 (PDT)","")
@@ -21,13 +39,6 @@ function _h(id, df, ts) {
 }
 
 function showLoading(show) {
-    /*
-    if (show) {
-        $('#loadingOverlay').css('visibility', 'visible')
-    } else {
-        $('#loadingOverlay').css('visibility', 'hidden')
-    }
-   */
     if (show) {
         $('#loadingOverlay').show()
     } else {
@@ -168,15 +179,30 @@ function getData(ctx, id, df, ts) {
 $(document).ready(function() {
     var ctx = $("#canvas")[0].getContext("2d")
 
-    var updateGraphCross = function() {
-        var survey = $("#dataSelector").val()
-        var df = $("#dfSelector").val()
-        //var df = 400
+    var updateGraphLong = function(freq, df) {
+        var freqString = sprintf("%.3fMHz", freq / 10e5)
+        $("#chartTitle")[0].innerHTML = freqString + "/Time"
+        var chartTitle = $('#chartTitle')[0].innerHTML
+        var newURL = '?freq=' + freq + '&df=' + df
+        window.history.replaceState(chartTitle, chartTitle, newURL)
+        showLoading(true)
+        getData(ctx, freq, df, true)
+    }
+
+    var updateGraphCross = function(survey, df) {
         var selector = $("#dataSelector")[0]
         var selectIndex = selector.selectedIndex
         $("#chartTitle")[0].innerHTML = "Power/Frequency @ " + selector.children[selectIndex].innerHTML
-        showLoading(true)
+        var chartTitle = $('#chartTitle')[0].innerHTML
+        var newURL = '?sv=' + survey + '&df=' + df
+        window.history.replaceState(chartTitle, chartTitle, newURL)
         getData(ctx, survey, df, false)
+    }
+
+    var updateGraphCrossForm = function() {
+        var survey = $("#dataSelector").val()
+        var df = $("#dfSelector").val()
+        updateGraphCross(survey, df)
     }
 
     var scheduleUpdateGraphCross = function() {
@@ -185,7 +211,7 @@ $(document).ready(function() {
             updateGraphTimeout = null
         }
 
-        updateGraphTimeout = setTimeout(updateGraphCross, 250)
+        updateGraphTimeout = setTimeout(updateGraphCrossForm, 250)
     }
 
     // Set max reduction factor
@@ -204,19 +230,27 @@ $(document).ready(function() {
         if (isTimeSeries) {
             var id = surveyLUT[activePoints[0].label]
             $("#dataSelector")[0].selectedIndex = id
-            updateGraphCross()
+            updateGraphCrossForm()
         } else {
             var freq = Math.round(parseFloat(activePoints[0].label.replace("MHz","")) * 10e5)
-            var freqString = sprintf("%.3fMHz", freq / 10e5)
-            $("#chartTitle")[0].innerHTML = freqString + "/Time"
-            showLoading(true)
-            getData(ctx, freq, df, true)
+            updateGraphLong(freq,df)
         }
     })
 
-    // Populate data selector
+    var qSurveyId = parseInt(getUrlParameter('sv','-1'))
+    var qFreq = parseInt(getUrlParameter('freq','-1'))
+    var qDf = parseInt(getUrlParameter('df','400'))
+
+    var reqData = {}
+    if (qSurveyId > 0) {
+        $('#formArea').hide()
+        $('#chartArea').removeClass().addClass('col-md-12')
+        reqData['id'] = qSurveyId
+    }
+
     $.ajax({
         url: "/survey",
+        data: reqData,
         success: function(result) {
             var selector = $("#dataSelector")
             var len = result["surveys"].length;
@@ -232,7 +266,12 @@ $(document).ready(function() {
             }
 
             selector[0].selectedIndex = 0
-            scheduleUpdateGraphCross()
+
+            if (qFreq > 0) {
+                updateGraphLong(qFreq, qDf)
+            } else {
+                scheduleUpdateGraphCross()
+            }
         }
     });
 })
