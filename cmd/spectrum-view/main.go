@@ -144,11 +144,25 @@ func sampleHandler(c *gin.Context, db *sql.DB) {
 func surveyHandler(c *gin.Context, db *sql.DB) {
 	var resp []m.Survey
 
-	rows, err := db.Query(`
-			SELECT srv.id, srv.label, srv.location, srv.time, st.tags
-			FROM survey srv LEFT JOIN survey_tags st ON srv.id = st.survey_id
-			ORDER BY time DESC
-			LIMIT 1000`)
+	id, err := strconv.ParseInt(c.DefaultQuery("id", "0"), 0, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	}
+
+	var rows *sql.Rows
+	if id > 0 {
+		rows, err = db.Query(`
+				SELECT srv.id, srv.label, srv.location, srv.time, st.tags
+				FROM survey srv LEFT JOIN survey_tags st ON srv.id = st.survey_id
+				WHERE srv.id = $1
+				ORDER BY time DESC`, id)
+	} else {
+		rows, err = db.Query(`
+				SELECT srv.id, srv.label, srv.location, srv.time, st.tags
+				FROM survey srv LEFT JOIN survey_tags st ON srv.id = st.survey_id
+				ORDER BY time DESC`)
+	}
+
 	if err != nil {
 		log.Printf("Error querying survey: %q", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
