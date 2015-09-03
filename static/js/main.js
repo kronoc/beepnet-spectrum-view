@@ -215,9 +215,6 @@ $(document).ready(function() {
         updateGraphTimeout = setTimeout(updateGraphCrossForm, 250)
     }
 
-    // Set max reduction factor
-    $("#dfSelector")[0].selectedIndex = $("#dfSelector")[0].length - 1
-
     $("#dataSelector").height($("#chartArea").height()-220)
     $("#dataSelector").on("change", scheduleUpdateGraphCross)
     $("#dfSelector").on("change", scheduleUpdateGraphCross)
@@ -241,6 +238,14 @@ $(document).ready(function() {
     var qSurveyId = parseInt(getUrlParameter('sv','-1'))
     var qFreq = parseInt(getUrlParameter('freq','-1'))
     var qDf = parseInt(getUrlParameter('df','400'))
+
+    var dfSelector = $("#dfSelector")[0]
+    for (var i = 0; i < dfSelector.length; i++) {
+        if (dfSelector.children[i].value === '' + qDf) {
+            dfSelector.selectedIndex = i
+            break
+        }
+    }
 
     $.ajax({
         url: "/survey",
