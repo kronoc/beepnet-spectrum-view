@@ -45,11 +45,27 @@ func longSampleHandler(c *gin.Context, db *sql.DB) {
 		return
 	}
 
-	rows, err :=
-		db.Query(`
-				SELECT smp.power, sv.time from sample smp, survey sv
-				WHERE smp.survey_id = sv.id AND freq = $1 AND decfactor = $2
-				ORDER BY time`, freq, dFactor)
+	mostRecent, err := strconv.ParseInt(c.DefaultQuery("recent", "0"), 0, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	var rows *sql.Rows
+	if mostRecent != 0 {
+		rows, err =
+			db.Query(`
+					SELECT smp.power, sv.time from sample smp, survey sv
+					WHERE smp.survey_id = sv.id AND freq = $1 AND decfactor = $2
+					ORDER BY time DESC
+					LIMIT $1`, freq, dFactor, nSamples)
+	} else {
+		rows, err =
+			db.Query(`
+					SELECT smp.power, sv.time from sample smp, survey sv
+					WHERE smp.survey_id = sv.id AND freq = $1 AND decfactor = $2
+					ORDER BY time`, freq, dFactor)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
