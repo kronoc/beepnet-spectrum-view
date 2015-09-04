@@ -58,7 +58,7 @@ func longSampleHandler(c *gin.Context, db *sql.DB) {
 					SELECT smp.power, sv.time from sample smp, survey sv
 					WHERE smp.survey_id = sv.id AND freq = $1 AND decfactor = $2
 					ORDER BY time DESC
-					LIMIT $1`, freq, dFactor, nSamples)
+					LIMIT $3`, freq, dFactor, nSamples)
 	} else {
 		rows, err =
 			db.Query(`
@@ -87,10 +87,12 @@ func longSampleHandler(c *gin.Context, db *sql.DB) {
 	}
 
 	// Guard against not enough samples to fulfill nSamples
-	if sampMod == 0 {
+	// Also, don't decimate when requesting most recent
+	if sampMod == 0 || mostRecent != 0 {
 		sampMod = 1
 	}
 
+	log.Printf("# of samples: %d", nSamples)
 	log.Printf("Sample Modulus: %d", sampMod)
 
 	rowsToSlice := func(rows *sql.Rows) []LongSample {
@@ -103,10 +105,18 @@ func longSampleHandler(c *gin.Context, db *sql.DB) {
 			rows.Scan(&sample.Power, &sample.Time)
 			out = append(out, sample)
 		}
+
+		// Reverse if mostRecent != 0
+		if mostRecent != 0 {
+			for left, right := 0, len(out)-1; left < right; left, right = left+1, right-1 {
+				out[left], out[right] = out[right], out[left]
+			}
+		}
 		return out
 	}
 
 	resp = rowsToSlice(rows)
+	log.Printf("# of rows in response: %d", len(resp))
 
 	c.Header("Cache-Control", "public, max-age=604800")
 	c.JSON(http.StatusOK, gin.H{"samples": resp})
