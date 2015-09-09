@@ -11,6 +11,8 @@ var updateGraphTimeout = null
 var chart = null
 var cache = {}
 var cacheMRU = []
+var ltsA = 1
+var ltsB = 1
 
 // From: http://www.jquerybyexample.net/2012/06/get-url-parameters-using-jquery.html
 function getUrlParameter(sParam, defValue) {
@@ -100,7 +102,7 @@ function getData(ctx, id, df, ts) {
            if (ts) {
                labels[i] = fixTime(smp["time"])
            } else {
-               labels[i] = (smp["freq"] / 10e5) + "MHz"
+               labels[i] = smp["freq"] / 10e5
            }
        }
 
@@ -178,11 +180,15 @@ function getData(ctx, id, df, ts) {
 }
 
 $(document).ready(function() {
+    // Enable magnifier on spectrum map image
+    $('#spectrumMap').magnify()
+
     var ctx = $("#canvas")[0].getContext("2d")
 
     var updateGraphLong = function(freq, df) {
         var freqString = sprintf("%.3fMHz", freq / 10e5)
         $("#chartTitle")[0].innerHTML = freqString + "/Time"
+        $("#xlabel")[0].innerHTML = "Time"
         var chartTitle = $('#chartTitle')[0].innerHTML
         var newURL = '?freq=' + freq + '&df=' + df
         window.history.replaceState(chartTitle, chartTitle, newURL)
@@ -194,9 +200,11 @@ $(document).ready(function() {
         var selector = $("#dataSelector")[0]
         var selectIndex = selector.selectedIndex
         $("#chartTitle")[0].innerHTML = "Power/Frequency @ " + selector.children[selectIndex].innerHTML
+        $("#xlabel")[0].innerHTML = "Frequency (MHz)"
         var chartTitle = $('#chartTitle')[0].innerHTML
         var newURL = '?sv=' + survey + '&df=' + df
         window.history.replaceState(chartTitle, chartTitle, newURL)
+        showLoading(true)
         getData(ctx, survey, df, false)
     }
 
@@ -230,7 +238,7 @@ $(document).ready(function() {
             $("#dataSelector")[0].selectedIndex = id
             updateGraphCrossForm()
         } else {
-            var freq = Math.round(parseFloat(activePoints[0].label.replace("MHz","")) * 10e5)
+            var freq = Math.round(parseFloat(activePoints[0].label) * 10e5)
             updateGraphLong(freq,df)
         }
     })

@@ -4,10 +4,12 @@
         <title>{{ .title }}</title>
         <link rel="shortcut icon" href="/static/favicon.jpg" />
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+        <link rel="stylesheet" href="/static/css/magnify.css" />
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
         <script src="/static/js/sprintf.min.js"></script>
         <script src="/static/js/Chart.js"></script>
+        <script src="/static/js/jquery.magnify.js"></script>
         <style type="text/css">
             canvas {
                 width: 100%;
@@ -15,7 +17,7 @@
             }
 
             body {
-                padding-top: 40px;
+                padding-top: 50px;
             }
 
             .loading {
@@ -29,7 +31,7 @@
             }
 
             .navbar-inverse .navbar-brand {
-                color: #276389;
+                color: #FFF;
             }
 
             .navbar-left .navbar-brand {
@@ -43,16 +45,47 @@
             label {
                 font-weight: normal !important;
             }
+
+            #chartTitle {
+                text-align: center;
+            }
+
+            #ylabel {
+                position: absolute;
+                top: 50%;
+                transform: rotate(270deg) translateY(-120%);
+                transform-origin: left top 0;
+                float: left;
+                vertical-align: middle;
+                color: #aaa;
+            }
+
+            #xlabel {
+                margin-top: -1.2em;
+                text-align: center;
+                color: #aaa;
+            }
+
+            #spectrumMap {
+                max-width: 100%;
+                max-height: auto;
+            }
+
+            #spectrumPointer {
+                display: none;
+                position: relative;
+                margin-left: 0px;
+            }
         </style>
     </head>
     <body>
         <nav class="navbar navbar-inverse navbar-fixed-top">
         <div class="container-fluid">
             <div class="navbar-header navbar-left">
-                <span class="navbar-brand">Beep Networks: Spectrum Map</span>
+                <span class="navbar-brand">Beep Networks</span>
             </div>
             <div class="navbar-header navbar-right">
-                <span class="navbar-brand">UHF Activity in the Mission, San Francisco</span>
+                <span class="navbar-brand">Spectrum Map: UHF Activity in the Mission, San Francisco</span>
             </div>
         </div>
         </nav>
@@ -60,7 +93,7 @@
             <div class="row">
                 <div class="col-md-3" id="formArea">
                     <div class="form-group">
-                        <h3>Survey<br><small>Times are in PDT (UTC-0700)</small></h3>
+                        <h4>Select a time (PDT)<br></h4>
                         <select id="dataSelector" class="form-control" size="5"> </select>
                     </div>
                     <form class="form" role="form">
@@ -80,8 +113,10 @@
                     </form>
                 </div>
                 <div class="col-md-9" id="chartArea">
-                    <h3 id="chartTitle">(Select a survey)</h3>
-                    <canvas id="canvas" height="200" width="300"></canvas>
+                    <div id="ylabel">Power (db)</div>
+                    <h4 id="chartTitle">(Select a survey)</h4>
+                    <canvas id="canvas" height="160" width="300"></canvas>
+                    <div id="xlabel">...</div>
                     <div class="panel panel-default col-xs-4 col-xs-offset-4 col-md-2 col-md-offset-5 loading" id="loadingOverlay">
                         <div class="panel-body text-center text-info">
                             <h4>Loading</h4>
@@ -89,14 +124,25 @@
                     </div>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="spectrumPointer">
+                        <img src="/static/pointer.png">
+                    </div>
+                    <img src="/static/uhf_small.png" data-magnify-src="/static/uhf_medium.png" id="spectrumMap">
+                    <p class="text-center"><small>Derived from <a href="http://www.ntia.doc.gov/files/ntia/publications/spectrum_wall_chart_aug2011.pdf">NTIA U.S. Frequency Allocations</a> / Public Domain</small></p>
+                </div>
+
+            </div>
             <div class="row pad-extra">
                 <div class="col-md-4">
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <h3>What is this?</h3>
                         </div>
-                        <div class="panel-body"><p>A continuous survey of RF spectral power data across the 300MHz-3GHz (UHF) band at/near <a href="https://www.google.com/maps/place/2519+Mission+St,+San+Francisco,+CA+94110" target="_blank">our office</a> in San Francisco.</p>
+                        <div class="panel-body"><p>This is a continuous survey of RF spectral power data across the 300MHz-3GHz (UHF) band at/near <a href="https://www.google.com/maps/place/2519+Mission+St,+San+Francisco,+CA+94110" target="_blank">our office</a> in San Francisco.</p>
                             <p> View the entire spectrum at a certain point in time, or click on a point to see power in that band over time.</p>
+                            <p><b>Check out the <a href="https://medium.com/@BeepLabs/fun-with-software-defined-radios-d547c83a7492">blog post</a> for lots more info.</b></p>
                         </div>
                     </div>
                 </div>
@@ -106,7 +152,7 @@
                             <h3>How did you collect this data?</h3>
                         </div>
                         <div class="panel-body"><p>We're using a <a href="https://www.nuand.com/blog/product/bladerf-x115/" target="_blank">BladeRF SDR</a>  and a wide-band antenna connected to a laptop to collect spectral power information using a modified version of <code>osmocom_spectrum_sense</code>.</p>
-                            <p>For details on our process and more information on this project in general, see the <a href="#">blog post</a>.</p>
+                            <p>For details on our process and more information on this project in general, see the <a href="https://medium.com/@BeepLabs/fun-with-software-defined-radios-d547c83a7492">blog post</a>.</p>
                         </div>
                     </div>
                 </div>
@@ -115,9 +161,10 @@
                         <div class="panel-heading">
                             <h3>Where can I get your code?</h3>
                         </div>
-                        <div class="panel-body"><p>Our code is currently publicly unavailable, but we do plan on making the collection software available and providing upload API keys for anyone interested in helping us expand our survey.</p>
-                            <p>Server code: <a href="https://github.com/hellobeep/beepnet-spectrum-view">Github</a></p>
-                            <p>Collector (client) code: <em>Not yet released</em></p>
+                        <div class="panel-body">
+                            <p>Server code: <a href="https://github.com/hellobeep/beepnet-spectrum-view">Github</a> (Golang, Heroku)</p>
+                            <p>Collector (client) code: <em>Not yet released</em> (Python)</p>
+                            <p>We plan on making the collection software available "soon" and providing upload API keys for anyone interested in helping us expand our survey.</p>
                             <p>Send us an email at <a href="mailto://spectrum@thisisbeep.com">spectrum@thisisbeep.com</a> if you're interested in the client code and we'll get you set up with an upload API key.</p>
                         </div>
                     </div>
